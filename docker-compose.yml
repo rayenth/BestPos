@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  # InfluxDB 2.x
+  influxdb:
+    image: influxdb:2
+    container_name: influxdb
+    ports:
+      - "8086:8086"   # expose InfluxDB UI/API
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    environment:
+      # Automatic setup
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin123
+      - DOCKER_INFLUXDB_INIT_ORG=iot
+      - DOCKER_INFLUXDB_INIT_BUCKET=positions
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=mytoken
+
+  # Telegraf for MQTT → InfluxDB
+  telegraf:
+    build:
+      context: ./telegraf
+    container_name: telegraf
+
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+    volumes:
+      - ./telegraf/telegraf.config:/etc/telegraf/telegraf.conf:ro
+    restart: unless-stopped
+
+
+
+  grafana:
+     image: grafana/grafana:12.3.0
+     container_name: grafana
+     ports:
+      - "3000:3000"
+     environment:
+       GF_SECURITY_ADMIN_USER: admin
+       GF_SECURITY_ADMIN_PASSWORD: admin123
+       GF_INSTALL_PLUGINS: "grafana-worldmap-panel"
+     depends_on:
+       - influxdb
+     volumes:
+       - grafana_data:/var/lib/grafana
+volumes:
+  influxdb_data:
+
+  grafana_data:
